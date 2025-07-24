@@ -225,6 +225,11 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    - name: Install PostgreSQL client
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+
     - name: Build API Docker image
       run: |
         docker build -f docker/api.Dockerfile -t stack-api:test .
@@ -233,10 +238,51 @@ jobs:
       run: |
         docker build -f docker/client.Dockerfile -t stack-client:test .
 
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        echo "🔍 Waiting for PostgreSQL to be ready..."
+        for i in {1..30}; do
+          if pg_isready -h localhost -p 5432 -U postgres; then
+            echo "✅ PostgreSQL is ready"
+            break
+          else
+            echo "⏳ Waiting for PostgreSQL (attempt $i/30)..."
+            sleep 2
+          fi
+        done
+        
+        # Test database connection
+        echo "🔍 Testing database connection..."
+        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d stack -c "SELECT version();" || {
+          echo "❌ Could not connect to database"
+          exit 1
+        }
+        
+        # Initialize database schema
+        echo "🔍 Initializing database schema..."
+        cd api
+        npm ci
+        DB_HOST=localhost DB_PORT=5432 DB_NAME=stack DB_USER=postgres DB_PASSWORD=postgres DB_SSL=false npm run db:init || {
+          echo "❌ Could not initialize database"
+          exit 1
+        }
+        cd ..
+
     - name: Test API container
       run: |
-        # Start API container connected to the PostgreSQL service
-        docker run --rm -d --name test-api \
+        # First, let's try a simple container test without database
+        echo "🔍 Testing API container basic startup..."
+        
+        # Try to run the container with minimal config first
+        echo "📋 Step 1: Testing container image integrity..."
+        docker run --rm stack-api:test node --version || {
+          echo "❌ Container image is broken"
+          exit 1
+        }
+        
+        # Now test with database connection
+        echo "� Step 2: Starting API container with database..."
+        CONTAINER_ID=$(docker run -d --name test-api \
           --network host \
           -e DB_HOST=localhost \
           -e DB_PORT=5432 \
@@ -246,33 +292,58 @@ jobs:
           -e DB_SSL=false \
           -e NODE_ENV=test \
           -e JWT_SECRET=test-secret-key \
-          stack-api:test
+          -e PORT=3000 \
+          stack-api:test)
         
-        # Wait for container to start
-        sleep 15
+        echo "📋 Container ID: $CONTAINER_ID"
         
-        # Check if container is still running (not crashed)
-        if docker ps | grep test-api; then
+        # Wait a moment for container to start
+        sleep 5
+        
+        # Check container status immediately
+        echo "🔍 Checking container status..."
+        docker ps -a | grep test-api || echo "Container not found in ps"
+        
+        # Get container logs immediately
+        echo "📋 Container logs:"
+        docker logs test-api 2>&1 || echo "Could not get logs"
+        
+        # Check if container is still running
+        if docker ps | grep test-api > /dev/null; then
           echo "✅ API container is running successfully"
           
-          # Test health endpoint if accessible
-          for i in {1..5}; do
-            if curl -f http://localhost:3000/health 2>/dev/null; then
+          # Wait a bit more for the API to be ready
+          sleep 10
+          
+          # Test health endpoint with timeout
+          echo "🔍 Testing health endpoint..."
+          for i in {1..3}; do
+            if timeout 5 curl -f http://localhost:3000/health 2>/dev/null; then
               echo "✅ API health endpoint is accessible"
               break
             else
-              echo "⏳ Waiting for API to be ready (attempt $i/5)..."
-              sleep 3
+              echo "⏳ Waiting for API to be ready (attempt $i/3)..."
+              docker logs test-api --tail 20 2>&1 || true
+              sleep 5
             fi
           done
         else
-          echo "❌ API container crashed - checking logs:"
-          docker logs test-api || true
+          echo "❌ API container crashed or exited"
+          echo "📋 Final container logs:"
+          docker logs test-api 2>&1 || echo "Could not get final logs"
+          
+          echo "📋 Container inspect:"
+          docker inspect test-api --format='{{.State.ExitCode}} {{.State.Error}}' 2>/dev/null || echo "Could not inspect container"
+          
+          # Clean up and exit with error
+          docker rm test-api 2>/dev/null || true
           exit 1
         fi
         
         # Clean up
-        docker stop test-api || true
+        echo "🧹 Cleaning up container..."
+        docker stop test-api 2>/dev/null || true
+        docker rm test-api 2>/dev/null || true
 
     - name: Test Client container
       run: |
