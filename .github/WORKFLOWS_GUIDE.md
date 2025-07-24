@@ -57,7 +57,7 @@ The README includes real-time status badges for all 4 workflows:
 
 - [![Code Quality](https://github.com/lemonadewsugar/stack/workflows/Code%20Quality%20%26%20Linting/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/code-quality.yml)
 - [![CI](https://github.com/lemonadewsugar/stack/workflows/Continuous%20Integration/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/ci.yml)
-- [![PR Validation](https://github.com/lemonadewsugar/stack/workflows/Pull%20Request%20Validation/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/pr-validation.yml)
+- [![PR Validation](https://github.com/lemonadewsugar/stack/workflows/📝%20Pull%20Request%20Validation/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/pr-validation.yml)
 - [![Maintenance](https://github.com/lemonadewsugar/stack/workflows/🛠️%20Dependency%20Maintenance/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/maintenance.yml)
 
 ## 📊 Pipeline Flow
