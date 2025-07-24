@@ -285,10 +285,6 @@ project/
 - **Infrastructure**: Terraform
 - **Containers**: Docker + AWS ECR
 
-## 📄 License
-
-This project is proprietary software for internal application platform use.
-
 # API setup and start
 cd api
 npm install
@@ -554,10 +550,6 @@ terraform output
 aws logs describe-log-groups
 aws ecs list-clusters
 ```
-
-## License
-
-[Your License Here]
 
 ## Support
 

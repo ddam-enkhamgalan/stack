@@ -12,10 +12,7 @@ import type {
   ApiResponse,
   AuthenticatedRequest,
 } from '../types/index.js';
-import {
-  createApiResponse,
-  createErrorResponse,
-} from '../utils/helpers.js';
+import { createApiResponse, createErrorResponse } from '../utils/helpers.js';
 
 const router = Router();
 
@@ -84,16 +81,18 @@ router.post(
   '/register',
   async (
     req: Request,
-    res: Response<ApiResponse<AuthResponse> | ReturnType<typeof createErrorResponse>>
+    res: Response<
+      ApiResponse<AuthResponse> | ReturnType<typeof createErrorResponse>
+    >
   ): Promise<void> => {
     const userData = req.body as CreateUserRequest;
 
     try {
       const authResponse = await AuthService.register(userData);
-      
-      res.status(201).json(
-        createApiResponse(authResponse, 'User registered successfully')
-      );
+
+      res
+        .status(201)
+        .json(createApiResponse(authResponse, 'User registered successfully'));
     } catch (error) {
       if (error instanceof Error) {
         switch (error.message) {
@@ -182,7 +181,9 @@ router.post(
   '/login',
   async (
     req: Request,
-    res: Response<ApiResponse<AuthResponse> | ReturnType<typeof createErrorResponse>>
+    res: Response<
+      ApiResponse<AuthResponse> | ReturnType<typeof createErrorResponse>
+    >
   ): Promise<void> => {
     const { email, password } = req.body as LoginRequest;
 
@@ -198,7 +199,9 @@ router.post(
             res.status(400).json(createErrorResponse(error.message, 400));
             return;
           case 'Invalid credentials':
-            res.status(401).json(createErrorResponse('Invalid email or password', 401));
+            res
+              .status(401)
+              .json(createErrorResponse('Invalid email or password', 401));
             return;
         }
       }
@@ -273,13 +276,16 @@ router.post(
   async (
     req: Request,
     res: Response<
-      ApiResponse<{ user: User; accessToken: string }> | ReturnType<typeof createErrorResponse>
+      | ApiResponse<{ user: User; accessToken: string }>
+      | ReturnType<typeof createErrorResponse>
     >
   ): Promise<void> => {
     const { refreshToken } = req.body as RefreshTokenRequest;
 
     if (!refreshToken) {
-      res.status(400).json(createErrorResponse('Refresh token is required', 400));
+      res
+        .status(400)
+        .json(createErrorResponse('Refresh token is required', 400));
       return;
     }
 
@@ -301,7 +307,9 @@ router.post(
             return;
           case 'Invalid or expired refresh token':
           case 'Token refresh failed':
-            res.status(401).json(createErrorResponse('Invalid refresh token', 401));
+            res
+              .status(401)
+              .json(createErrorResponse('Invalid refresh token', 401));
             return;
           case 'User not found':
             res.status(404).json(createErrorResponse(error.message, 404));
@@ -348,10 +356,10 @@ router.post(
 router.get(
   '/me',
   authenticateToken,
-  async (
+  (
     req: AuthenticatedRequest,
     res: Response<ApiResponse<User> | ReturnType<typeof createErrorResponse>>
-  ): Promise<void> => {
+  ): void => {
     if (!req.user) {
       res.status(401).json(createErrorResponse('User not authenticated', 401));
       return;
@@ -362,7 +370,9 @@ router.get(
         createApiResponse(req.user, 'User profile retrieved successfully')
       );
     } catch {
-      res.status(500).json(createErrorResponse('Failed to retrieve user profile', 500));
+      res
+        .status(500)
+        .json(createErrorResponse('Failed to retrieve user profile', 500));
     }
   }
 );

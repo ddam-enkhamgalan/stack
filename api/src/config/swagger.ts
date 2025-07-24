@@ -9,8 +9,7 @@ const options = {
       description: process.env.API_DESCRIPTION ?? 'Stack API',
       contact: {
         name: process.env.API_CONTACT_NAME ?? 'Enkh',
-        email:
-          process.env.API_CONTACT_EMAIL ?? 'amgaa.lcs@gmail.com',
+        email: process.env.API_CONTACT_EMAIL ?? 'amgaa.lcs@gmail.com',
       },
     },
     servers: [

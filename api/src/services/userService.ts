@@ -1,11 +1,7 @@
 import * as userOps from '../db/operations/userOperations.js';
 import type { User, UpdateUserRequest } from '../types/index.js';
 import { hashPassword } from '../utils/auth.js';
-import {
-  isValidEmail,
-  isValidString,
-  isValidUuid,
-} from '../utils/helpers.js';
+import { isValidEmail, isValidString, isValidUuid } from '../utils/helpers.js';
 
 /**
  * User service - handles business logic for user operations
@@ -14,7 +10,10 @@ export class UserService {
   /**
    * Get all users with pagination
    */
-  static async getAllUsers(limit = 50, offset = 0): Promise<{
+  static async getAllUsers(
+    limit = 50,
+    offset = 0
+  ): Promise<{
     users: User[];
     total: number;
     hasMore: boolean;
@@ -99,7 +98,7 @@ export class UserService {
 
     if (updateData.email) {
       userData.email = updateData.email.toLowerCase().trim();
-      
+
       // Check if email is already taken by another user
       const existingEmailUser = await userOps.getUserByEmail(userData.email);
       if (existingEmailUser && existingEmailUser.id !== id) {

@@ -10,10 +10,7 @@ import type {
   ApiResponse,
   AuthenticatedRequest,
 } from '../types/index.js';
-import {
-  createApiResponse,
-  createErrorResponse,
-} from '../utils/helpers.js';
+import { createApiResponse, createErrorResponse } from '../utils/helpers.js';
 
 const router = Router();
 
@@ -67,29 +64,31 @@ const router = Router();
  *         $ref: '#/components/responses/InternalServerError'
  */
 // GET /api/users
-router.get(
-  '/',
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
 
-      const result = await UserService.getAllUsers(limit, offset);
-      
-      res.json(
-        createApiResponse(
-          result,
-          ApiMessages.success.users.retrieved(),
-          result.users.length
+    const result = await UserService.getAllUsers(limit, offset);
+
+    res.json(
+      createApiResponse(
+        result,
+        ApiMessages.success.users.retrieved(),
+        result.users.length
+      )
+    );
+  } catch {
+    res
+      .status(500)
+      .json(
+        createErrorResponse(
+          'Internal server error occurred while fetching users',
+          500
         )
       );
-    } catch {
-      res.status(500).json(
-        createErrorResponse('Internal server error occurred while fetching users', 500)
-      );
-    }
   }
-);
+});
 
 /**
  * @swagger
@@ -154,7 +153,10 @@ router.get(
 
       res.json(createApiResponse(user, ApiMessages.success.users.fetched()));
     } catch (error) {
-      if (error instanceof Error && error.message === 'Invalid user ID format') {
+      if (
+        error instanceof Error &&
+        error.message === 'Invalid user ID format'
+      ) {
         res
           .status(400)
           .json(
@@ -258,9 +260,7 @@ router.put(
     const updateData = req.body as UpdateUserRequest;
 
     if (!req.user) {
-      res
-        .status(401)
-        .json(createErrorResponse('User not authenticated', 401));
+      res.status(401).json(createErrorResponse('User not authenticated', 401));
       return;
     }
 
@@ -284,9 +284,7 @@ router.put(
             res.status(400).json(createErrorResponse('Invalid user ID', 400));
             return;
           case 'You can only update your own profile':
-            res
-              .status(403)
-              .json(createErrorResponse(error.message, 403));
+            res.status(403).json(createErrorResponse(error.message, 403));
             return;
           case 'Name must be a valid string':
           case 'Email must be valid':
@@ -372,9 +370,7 @@ router.delete(
     const id = req.params.id ?? '';
 
     if (!req.user) {
-      res
-        .status(401)
-        .json(createErrorResponse('User not authenticated', 401));
+      res.status(401).json(createErrorResponse('User not authenticated', 401));
       return;
     }
 
@@ -396,9 +392,7 @@ router.delete(
             res.status(400).json(createErrorResponse('Invalid user ID', 400));
             return;
           case 'You can only delete your own profile':
-            res
-              .status(403)
-              .json(createErrorResponse(error.message, 403));
+            res.status(403).json(createErrorResponse(error.message, 403));
             return;
           case 'User not found':
             res.status(404).json(createErrorResponse(error.message, 404));

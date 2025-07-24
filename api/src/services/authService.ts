@@ -26,7 +26,9 @@ export class AuthService {
     }
 
     // Get user with password hash
-    const user = await authOps.getUserByEmailForAuth(email.toLowerCase().trim());
+    const user = await authOps.getUserByEmailForAuth(
+      email.toLowerCase().trim()
+    );
     if (!user) {
       throw new Error('Invalid credentials');
     }
@@ -75,7 +77,9 @@ export class AuthService {
     }
 
     // Check if user already exists
-    const existingUser = await authOps.checkUserExists(userData.email.toLowerCase().trim());
+    const existingUser = await authOps.checkUserExists(
+      userData.email.toLowerCase().trim()
+    );
     if (existingUser) {
       throw new Error('User already exists');
     }
@@ -153,7 +157,7 @@ export class AuthService {
 
     try {
       const decoded = verifyToken(tokenString);
-      
+
       // Get user by ID (without password hash)
       const user = await authOps.getUserByIdForRefresh(decoded.userId);
       if (!user) {
@@ -163,7 +167,7 @@ export class AuthService {
       // Remove password hash from response
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { passwordHash: _, ...userWithoutPassword } = user;
-      
+
       return userWithoutPassword;
     } catch {
       return null;
