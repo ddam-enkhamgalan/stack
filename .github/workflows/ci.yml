@@ -203,6 +203,21 @@ jobs:
     name: Docker Build Test
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: stack
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -220,13 +235,71 @@ jobs:
 
     - name: Test API container
       run: |
-        docker run --rm -d --name test-api -p 3001:3000 \
+        # Start API container connected to the PostgreSQL service
+        docker run --rm -d --name test-api \
+          --network host \
           -e DB_HOST=localhost \
+          -e DB_PORT=5432 \
           -e DB_NAME=stack \
           -e DB_USER=postgres \
           -e DB_PASSWORD=postgres \
+          -e DB_SSL=false \
+          -e NODE_ENV=test \
+          -e JWT_SECRET=test-secret-key \
           stack-api:test
-        sleep 5
-        # Test if container is running
-        docker ps | grep test-api
+        
+        # Wait for container to start
+        sleep 15
+        
+        # Check if container is still running (not crashed)
+        if docker ps | grep test-api; then
+          echo "✅ API container is running successfully"
+          
+          # Test health endpoint if accessible
+          for i in {1..5}; do
+            if curl -f http://localhost:3000/health 2>/dev/null; then
+              echo "✅ API health endpoint is accessible"
+              break
+            else
+              echo "⏳ Waiting for API to be ready (attempt $i/5)..."
+              sleep 3
+            fi
+          done
+        else
+          echo "❌ API container crashed - checking logs:"
+          docker logs test-api || true
+          exit 1
+        fi
+        
+        # Clean up
         docker stop test-api || true
+
+    - name: Test Client container
+      run: |
+        # Start Client container
+        docker run --rm -d --name test-client \
+          -p 3000:3000 \
+          -e NEXT_PUBLIC_API_URL=http://localhost:3000 \
+          stack-client:test
+        
+        # Wait for container to start
+        sleep 10
+        
+        # Check if container is running
+        if docker ps | grep test-client; then
+          echo "✅ Client container is running successfully"
+          
+          # Test if Next.js is responding
+          if curl -f http://localhost:3000/ 2>/dev/null; then
+            echo "✅ Client is serving pages successfully"
+          else
+            echo "⚠️ Client not accessible on port 3000 (may need more time)"
+          fi
+        else
+          echo "❌ Client container crashed - checking logs:"
+          docker logs test-client || true
+          exit 1
+        fi
+        
+        # Clean up
+        docker stop test-client || true

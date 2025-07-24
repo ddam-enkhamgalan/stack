@@ -165,7 +165,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        const res = await fetch('http://localhost:3001/api/auth/login', {
+        const res = await fetch('http://localhost:3000/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(credentials)
@@ -210,7 +210,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
 async function refreshAccessToken(token: any) {
   try {
-    const response = await fetch('http://localhost:3001/api/auth/refresh', {
+    const response = await fetch('http://localhost:3000/api/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: token.refreshToken })
@@ -371,7 +371,7 @@ NEXTAUTH_SECRET=your-nextauth-secret
 NEXTAUTH_URL=http://localhost:3000
 
 # API Configuration
-API_URL=http://localhost:3001
+API_URL=http://localhost:3000
 ```
 
 ## Error Handling
