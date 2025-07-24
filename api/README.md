@@ -167,6 +167,7 @@ npm run lint --fix
 ---
 
 For comprehensive documentation and deployment instructions, see the [main project documentation](../docs/README.md).
+```
 │   └── index.ts     # Message loading utilities
 ├── middleware/      # Express middleware
 │   ├── auth.ts      # JWT authentication middleware
