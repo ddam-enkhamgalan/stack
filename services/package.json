@@ -1,0 +1,34 @@
+{
+  "name": "stack-services",
+  "version": "1.0.0",
+  "description": "Lambda services for Stack project",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "npm run build && npm run zip",
+    "zip": "cd dist && zip -r ../user-service.zip user-service.js && zip -r ../notification-service.zip notification-service.js",
+    "deploy": "npm run package",
+    "clean": "rm -rf dist *.zip",
+    "lint": "eslint *.ts",
+    "lint:fix": "eslint *.ts --fix",
+    "format": "prettier --write *.ts",
+    "format:check": "prettier --check *.ts"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1691.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^22.5.4",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

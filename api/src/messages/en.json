@@ -1,0 +1,31 @@
+{
+  "api": {
+    "success": {
+      "users": {
+        "retrieved": "Users retrieved successfully",
+        "created": "User created successfully",
+        "fetched": "User retrieved successfully"
+      }
+    },
+    "errors": {
+      "validation": {
+        "invalidUserId": "Invalid user ID",
+        "userNotFound": "User not found",
+        "nameRequired": "Name is required and must be a non-empty string",
+        "emailRequired": "Valid email is required",
+        "emailExists": "User with this email already exists"
+      },
+      "http": {
+        "notFound": "Not Found",
+        "notFoundDescription": "The requested resource was not found",
+        "rateLimitExceeded": "Too many requests from this IP, please try again later."
+      }
+    }
+  },
+  "health": {
+    "status": {
+      "ok": "OK",
+      "error": "ERROR"
+    }
+  }
+}

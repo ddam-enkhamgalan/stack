@@ -1,0 +1,20 @@
+# Docker ignore file for API
+node_modules
+npm-debug.log
+.npm
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+dist
+logs
+*.log
+coverage
+.nyc_output
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+*~

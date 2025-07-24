@@ -1,0 +1,31 @@
+{
+  "api": {
+    "success": {
+      "users": {
+        "retrieved": "ユーザーが正常に取得されました",
+        "created": "ユーザーが正常に作成されました",
+        "fetched": "ユーザーが正常に取得されました"
+      }
+    },
+    "errors": {
+      "validation": {
+        "invalidUserId": "無効なユーザーID",
+        "userNotFound": "ユーザーが見つかりません",
+        "nameRequired": "名前は必須で、空でない文字列である必要があります",
+        "emailRequired": "有効なメールアドレスが必要です",
+        "emailExists": "このメールアドレスのユーザーは既に存在します"
+      },
+      "http": {
+        "notFound": "見つかりません",
+        "notFoundDescription": "要求されたリソースが見つかりませんでした",
+        "rateLimitExceeded": "このIPからのリクエストが多すぎます。しばらくしてから再試行してください。"
+      }
+    }
+  },
+  "health": {
+    "status": {
+      "ok": "OK",
+      "error": "エラー"
+    }
+  }
+}
