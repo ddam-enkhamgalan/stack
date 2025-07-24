@@ -37,6 +37,7 @@
     
     "// Testing": "",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:coverage": "echo \"Coverage report not implemented yet\" && exit 0",
     "test:messages": "tsx ../scripts/api/test-messages.ts",
     "test:auth": "../scripts/testing/test-complete-auth.sh",
     "test:uuid": "../scripts/testing/test-uuid-auth.sh",

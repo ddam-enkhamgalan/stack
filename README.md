@@ -6,6 +6,11 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 [![Express](https://img.shields.io/badge/Express-5.1-lightgrey.svg)](https://expressjs.com/)
 
+[![Code Quality](https://github.com/lemonadewsugar/stack/workflows/Code%20Quality%20%26%20Linting/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/code-quality.yml)
+[![CI](https://github.com/lemonadewsugar/stack/workflows/Continuous%20Integration/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/ci.yml)
+[![PR Validation](https://github.com/lemonadewsugar/stack/workflows/Pull%20Request%20Validation/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/pr-validation.yml)
+[![Maintenance](https://github.com/lemonadewsugar/stack/workflows/🛠️%20Dependency%20Maintenance/badge.svg)](https://github.com/lemonadewsugar/stack/actions/workflows/maintenance.yml)
+
 A modern, cloud-native web application platform built with **Next.js 15**, **Express 5.1**, and **AWS services**. Features a clean architecture with comprehensive authentication, real-time capabilities, and full TypeScript support.
 
 ## ✨ Features

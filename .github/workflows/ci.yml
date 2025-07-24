@@ -1,0 +1,232 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Test Matrix for different Node versions
+  test-matrix:
+    name: Test on Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20', '22']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: api/package-lock.json
+
+    - name: Install API dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: Run API type check
+      run: |
+        cd api
+        npm run type-check
+
+    - name: Test API build
+      run: |
+        cd api
+        npm run build
+
+  # Database Integration Test
+  database-test:
+    name: Database Integration Test
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: stack_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: api/package-lock.json
+
+    - name: Install API dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: Test database connection
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: stack_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_SSL: false
+      run: |
+        cd api
+        npm run db:init
+
+  # API Authentication Test
+  api-integration-test:
+    name: API Integration Test
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: stack_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: api/package-lock.json
+
+    - name: Install API dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: Initialize test database
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: stack_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_SSL: false
+        NODE_ENV: test
+      run: |
+        cd api
+        npm run db:init
+
+    - name: Start API server in background
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_NAME: stack_test
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_SSL: false
+        NODE_ENV: test
+        PORT: 3000
+      run: |
+        cd api
+        npm run build
+        npm start &
+        sleep 10
+      
+    - name: Test API health endpoint
+      run: |
+        curl -f http://localhost:3000/health
+
+    - name: Test API documentation endpoint
+      run: |
+        curl -f http://localhost:3000/api-docs/ | head -10
+
+  # Client Build Test
+  client-build-test:
+    name: Client Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+
+    - name: Install Client dependencies
+      run: |
+        cd client
+        npm ci
+
+    - name: Build Client
+      run: |
+        cd client
+        npm run build
+
+    - name: Test Client pages
+      run: |
+        cd client
+        # Check if built pages exist
+        test -d .next/static
+        test -f .next/build-manifest.json
+
+  # Docker Build Test
+  docker-build-test:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build API Docker image
+      run: |
+        docker build -f docker/api.Dockerfile -t stack-api:test .
+
+    - name: Build Client Docker image
+      run: |
+        docker build -f docker/client.Dockerfile -t stack-client:test .
+
+    - name: Test API container
+      run: |
+        docker run --rm -d --name test-api -p 3001:3000 \
+          -e DB_HOST=localhost \
+          -e DB_NAME=stack \
+          -e DB_USER=postgres \
+          -e DB_PASSWORD=postgres \
+          stack-api:test
+        sleep 5
+        # Test if container is running
+        docker ps | grep test-api
+        docker stop test-api || true

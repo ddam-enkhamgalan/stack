@@ -1,0 +1,262 @@
+name: Code Quality & Linting
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # API Code Quality Check
+  api-quality:
+    name: API - Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: api/package-lock.json
+
+    - name: Install API dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: TypeScript type check
+      run: |
+        cd api
+        npm run type-check
+
+    - name: ESLint check
+      run: |
+        cd api
+        npm run lint
+
+    - name: Prettier format check
+      run: |
+        cd api
+        npm run format:check
+
+    - name: Build check
+      run: |
+        cd api
+        npm run build
+
+    - name: Test messages system
+      run: |
+        cd api
+        npm run test:messages
+
+  # Client Code Quality Check
+  client-quality:
+    name: Client - Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+
+    - name: Install Client dependencies
+      run: |
+        cd client
+        npm ci
+
+    - name: Next.js lint check
+      run: |
+        cd client
+        npm run lint
+
+    - name: TypeScript type check & build
+      run: |
+        cd client
+        npm run build
+
+  # Services Code Quality Check
+  services-quality:
+    name: Services - Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: services/package-lock.json
+
+    - name: Install Services dependencies
+      run: |
+        cd services
+        npm ci
+
+    - name: TypeScript type check
+      run: |
+        cd services
+        npm run type-check
+
+    - name: ESLint check
+      run: |
+        cd services
+        npm run lint
+
+    - name: Prettier format check
+      run: |
+        cd services
+        npm run format:check
+
+    - name: Build check
+      run: |
+        cd services
+        npm run build
+
+  # Security and Dependency Check
+  code_security_audit:
+    name: Security & Dependency Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: API Security Audit
+      run: |
+        cd api
+        npm audit --audit-level=moderate
+      continue-on-error: true
+
+    - name: Client Security Audit
+      run: |
+        cd client
+        npm audit --audit-level=moderate
+      continue-on-error: true
+
+    - name: Services Security Audit
+      run: |
+        cd services
+        npm audit --audit-level=moderate
+      continue-on-error: true
+
+  # Documentation Check
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: api/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: Generate OpenAPI docs
+      run: |
+        cd api
+        npm run docs:generate
+
+    - name: Validate OpenAPI schema
+      run: |
+        cd api
+        npm run docs:validate
+
+    - name: Check README files exist
+      run: |
+        test -f README.md
+        test -f api/README.md
+        test -f docs/README.md
+
+  # Project Health Check
+  health-check:
+    name: Project Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install API dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: Install Client dependencies
+      run: |
+        cd client
+        npm ci
+
+    - name: Install Services dependencies
+      run: |
+        cd services
+        npm ci
+
+    - name: Run project health check
+      run: |
+        chmod +x scripts/health-check.sh
+        ./scripts/health-check.sh
+
+  # Code Coverage (if tests are added later)
+  code-coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    if: false  # Disabled until tests are implemented
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        cd api
+        npm ci
+
+    - name: Run tests with coverage
+      run: |
+        cd api
+        npm run test:coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./api/coverage/lcov.info
+        flags: api
+        name: api-coverage

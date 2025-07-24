@@ -1,0 +1,199 @@
+name: 🛠️ Dependency Maintenance
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dependency_check:
+    name: 📦 Dependency Check
+    runs-on: ubuntu-latest
+    
+    outputs:
+      api_updates: ${{ steps.check.outputs.api_updates }}
+      client_updates: ${{ steps.check.outputs.client_updates }}
+      services_updates: ${{ steps.check.outputs.services_updates }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Check for dependency updates
+      id: check
+      run: |
+        echo "🔍 Checking for dependency updates..."
+        
+        # Check API dependencies
+        cd api
+        API_OUTDATED=$(npm outdated --json || echo '{}')
+        API_COUNT=$(echo "$API_OUTDATED" | jq '. | length' || echo "0")
+        echo "api_updates=$API_COUNT" >> $GITHUB_OUTPUT
+        cd ..
+        
+        # Check Client dependencies
+        cd client
+        CLIENT_OUTDATED=$(npm outdated --json || echo '{}')
+        CLIENT_COUNT=$(echo "$CLIENT_OUTDATED" | jq '. | length' || echo "0")
+        echo "client_updates=$CLIENT_COUNT" >> $GITHUB_OUTPUT
+        cd ..
+        
+        # Check Services dependencies
+        cd services
+        SERVICES_OUTDATED=$(npm outdated --json || echo '{}')
+        SERVICES_COUNT=$(echo "$SERVICES_OUTDATED" | jq '. | length' || echo "0")
+        echo "services_updates=$SERVICES_COUNT" >> $GITHUB_OUTPUT
+        cd ..
+        
+        echo "📊 Update Summary:"
+        echo "- API: $API_COUNT packages"
+        echo "- Client: $CLIENT_COUNT packages"
+        echo "- Services: $SERVICES_COUNT packages"
+
+  security_check:
+    name: 🔒 Security Check
+    runs-on: ubuntu-latest
+    
+    outputs:
+      vulnerabilities_found: ${{ steps.audit.outputs.vulnerabilities_found }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: |
+        cd api && npm ci
+        cd ../client && npm ci
+        cd ../services && npm ci
+
+    - name: Security audit
+      id: audit
+      run: |
+        echo "🔍 Running security audit..."
+        
+        VULNERABILITIES=0
+        
+        # Audit API
+        cd api
+        if ! npm audit --audit-level=moderate; then
+          VULNERABILITIES=$((VULNERABILITIES + 1))
+        fi
+        cd ..
+        
+        # Audit Client
+        cd client
+        if ! npm audit --audit-level=moderate; then
+          VULNERABILITIES=$((VULNERABILITIES + 1))
+        fi
+        cd ..
+        
+        # Audit Services
+        cd services
+        if ! npm audit --audit-level=moderate; then
+          VULNERABILITIES=$((VULNERABILITIES + 1))
+        fi
+        cd ..
+        
+        echo "vulnerabilities_found=$VULNERABILITIES" >> $GITHUB_OUTPUT
+        
+        if [ $VULNERABILITIES -gt 0 ]; then
+          echo "❌ $VULNERABILITIES vulnerabilities found"
+        else
+          echo "✅ No security vulnerabilities found"
+        fi
+
+  create_maintenance_issue:
+    name: 📋 Create Maintenance Issue
+    runs-on: ubuntu-latest
+    needs: [dependency_check, security_check]
+    if: needs.dependency_check.outputs.api_updates > 0 || needs.dependency_check.outputs.client_updates > 0 || needs.dependency_check.outputs.services_updates > 0 || needs.security_check.outputs.vulnerabilities_found > 0
+    
+    steps:
+    - name: Create maintenance issue
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const apiUpdates = '${{ needs.dependency_check.outputs.api_updates }}';
+          const clientUpdates = '${{ needs.dependency_check.outputs.client_updates }}';
+          const servicesUpdates = '${{ needs.dependency_check.outputs.services_updates }}';
+          const vulnerabilities = '${{ needs.security_check.outputs.vulnerabilities_found }}';
+          
+          const priority = vulnerabilities > 0 ? '🚨 High' : 'Medium';
+          const labels = vulnerabilities > 0 ? ['maintenance', 'security', 'high-priority'] : ['maintenance'];
+          
+          const issueBody = `## 🛠️ Weekly Maintenance Report
+          
+          **Generated:** ${new Date().toISOString().split('T')[0]}
+          **Priority:** ${priority}
+          
+          ### 📊 Summary
+          
+          - **API Packages to Update:** ${apiUpdates}
+          - **Client Packages to Update:** ${clientUpdates}
+          - **Services Packages to Update:** ${servicesUpdates}
+          - **Security Vulnerabilities:** ${vulnerabilities}
+          
+          ### 📋 Action Items
+          
+          - [ ] Review and update outdated dependencies
+          - [ ] Address security vulnerabilities${vulnerabilities > 0 ? ' ⚠️' : ''}
+          - [ ] Test updated dependencies locally
+          - [ ] Update documentation if needed
+          - [ ] Verify license compliance
+          
+          ### 🔧 Local Development Instructions
+          
+          1. **Update Dependencies:**
+             \`\`\`bash
+             # Update API dependencies
+             cd api && npm update
+             
+             # Update Client dependencies
+             cd ../client && npm update
+             
+             # Update Services dependencies
+             cd ../services && npm update
+             \`\`\`
+          
+          2. **Security Fixes:**
+             \`\`\`bash
+             cd api && npm audit fix
+             cd ../client && npm audit fix
+             cd ../services && npm audit fix
+             \`\`\`
+          
+          3. **Local Testing:**
+             \`\`\`bash
+             ./scripts/dev.sh
+             \`\`\`
+          
+          4. **Check for Issues:**
+             \`\`\`bash
+             # Run quality checks
+             cd api && npm run lint && npm run type-check
+             cd ../client && npm run lint
+             cd ../services && npm run lint && npm run type-check
+             \`\`\`
+          
+          ---
+          *This issue was automatically created by the maintenance workflow.*`;
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: \`🛠️ Weekly Maintenance - \${new Date().toISOString().split('T')[0]}\`,
+            body: issueBody,
+            labels: labels
+          });
