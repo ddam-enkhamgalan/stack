@@ -25,36 +25,67 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Install dependencies
+      run: |
+        echo "📦 Installing dependencies..."
+        
+        # Install API dependencies
+        cd api && npm ci
+        cd ..
+        
+        # Install Client dependencies  
+        cd client && npm ci
+        cd ..
+        
+        # Install Services dependencies
+        cd services && npm ci
+        cd ..
+
     - name: Check for dependency updates
       id: check
       run: |
         echo "🔍 Checking for dependency updates..."
         
-        # Check API dependencies
-        cd api
-        API_OUTDATED=$(npm outdated --json || echo '{}')
-        API_COUNT=$(echo "$API_OUTDATED" | jq '. | length' || echo "0")
-        echo "api_updates=$API_COUNT" >> $GITHUB_OUTPUT
-        cd ..
+        # Function to safely count outdated packages
+        count_outdated() {
+          local dir=$1
+          cd "$dir"
+          local outdated_json=$(npm outdated --json 2>/dev/null || echo '{}')
+          local count=0
+          
+          # Handle case where npm outdated returns empty or malformed JSON
+          if [ -n "$outdated_json" ] && [ "$outdated_json" != "{}" ]; then
+            count=$(echo "$outdated_json" | jq -r 'if type == "object" then . | length else 0 end' 2>/dev/null || echo "0")
+          fi
+          
+          # Ensure count is a valid number
+          if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+            count=0
+          fi
+          
+          echo "$count"
+          cd ..
+        }
         
-        # Check Client dependencies
-        cd client
-        CLIENT_OUTDATED=$(npm outdated --json || echo '{}')
-        CLIENT_COUNT=$(echo "$CLIENT_OUTDATED" | jq '. | length' || echo "0")
-        echo "client_updates=$CLIENT_COUNT" >> $GITHUB_OUTPUT
-        cd ..
+        # Check each directory
+        API_COUNT=$(count_outdated "api")
+        CLIENT_COUNT=$(count_outdated "client") 
+        SERVICES_COUNT=$(count_outdated "services")
         
-        # Check Services dependencies
-        cd services
-        SERVICES_OUTDATED=$(npm outdated --json || echo '{}')
-        SERVICES_COUNT=$(echo "$SERVICES_OUTDATED" | jq '. | length' || echo "0")
-        echo "services_updates=$SERVICES_COUNT" >> $GITHUB_OUTPUT
-        cd ..
+        # Set outputs
+        echo "api_updates=${API_COUNT}" >> $GITHUB_OUTPUT
+        echo "client_updates=${CLIENT_COUNT}" >> $GITHUB_OUTPUT
+        echo "services_updates=${SERVICES_COUNT}" >> $GITHUB_OUTPUT
         
         echo "📊 Update Summary:"
-        echo "- API: $API_COUNT packages"
-        echo "- Client: $CLIENT_COUNT packages"
-        echo "- Services: $SERVICES_COUNT packages"
+        echo "- API: ${API_COUNT} packages"
+        echo "- Client: ${CLIENT_COUNT} packages"
+        echo "- Services: ${SERVICES_COUNT} packages"
+        
+        # Debug output values for troubleshooting
+        echo "Debug - API_COUNT: '${API_COUNT}'"
+        echo "Debug - CLIENT_COUNT: '${CLIENT_COUNT}'"
+        echo "Debug - SERVICES_COUNT: '${SERVICES_COUNT}'"
 
   security_check:
     name: 🔒 Security Check
@@ -85,31 +116,29 @@ jobs:
         
         VULNERABILITIES=0
         
-        # Audit API
-        cd api
-        if ! npm audit --audit-level=moderate; then
-          VULNERABILITIES=$((VULNERABILITIES + 1))
-        fi
-        cd ..
+        # Function to safely run audit
+        run_audit() {
+          local dir=$1
+          cd "$dir"
+          echo "Auditing $dir..."
+          if ! npm audit --audit-level=moderate; then
+            echo "⚠️ Vulnerabilities found in $dir"
+            VULNERABILITIES=$((VULNERABILITIES + 1))
+          else
+            echo "✅ No vulnerabilities in $dir"
+          fi
+          cd ..
+        }
         
-        # Audit Client
-        cd client
-        if ! npm audit --audit-level=moderate; then
-          VULNERABILITIES=$((VULNERABILITIES + 1))
-        fi
-        cd ..
-        
-        # Audit Services
-        cd services
-        if ! npm audit --audit-level=moderate; then
-          VULNERABILITIES=$((VULNERABILITIES + 1))
-        fi
-        cd ..
+        # Audit each directory
+        run_audit "api"
+        run_audit "client" 
+        run_audit "services"
         
         echo "vulnerabilities_found=$VULNERABILITIES" >> $GITHUB_OUTPUT
         
         if [ $VULNERABILITIES -gt 0 ]; then
-          echo "❌ $VULNERABILITIES vulnerabilities found"
+          echo "❌ $VULNERABILITIES project(s) with vulnerabilities found"
         else
           echo "✅ No security vulnerabilities found"
         fi
@@ -118,7 +147,11 @@ jobs:
     name: 📋 Create Maintenance Issue
     runs-on: ubuntu-latest
     needs: [dependency_check, security_check]
-    if: needs.dependency_check.outputs.api_updates > 0 || needs.dependency_check.outputs.client_updates > 0 || needs.dependency_check.outputs.services_updates > 0 || needs.security_check.outputs.vulnerabilities_found > 0
+    if: |
+      (needs.dependency_check.outputs.api_updates != '0' && needs.dependency_check.outputs.api_updates != '') ||
+      (needs.dependency_check.outputs.client_updates != '0' && needs.dependency_check.outputs.client_updates != '') ||
+      (needs.dependency_check.outputs.services_updates != '0' && needs.dependency_check.outputs.services_updates != '') ||
+      (needs.security_check.outputs.vulnerabilities_found != '0' && needs.security_check.outputs.vulnerabilities_found != '')
     
     steps:
     - name: Create maintenance issue
